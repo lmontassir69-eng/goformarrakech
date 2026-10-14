@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowUpRight, ArrowDownRight, TrendingUp, CheckCircle2, AlertTriangle, Clock,
-  Calendar, Map, Users, Car, Truck, Building2, Hotel,
+  Calendar, Map as MapIcon, Users, Car, Truck, Building2, Hotel,
   MessageCircle, Zap, CreditCard, FileText, Radio, Loader2, Plus, Trash2, X, UserCircle,
   Pencil, Download, ChevronLeft, ChevronRight,
 } from "lucide-react";
@@ -172,7 +172,7 @@ function RevenueChart({ bookings }: { bookings: Booking[] }) {
       const confirmed = weekBookings.filter((b) => b.status === "confirmed" || b.status === "assigned");
       const revenue = confirmed.reduce((s, b) => s + Number(b.price_mad), 0);
 
-      const catMap = new Map<string, { revenue: number; count: number }>();
+      const catMap = new globalThis.Map<string, { revenue: number; count: number }>();
       for (const b of confirmed) {
         const cat = b.item_category || "Other";
         const ex = catMap.get(cat) || { revenue: 0, count: 0 };
@@ -552,7 +552,7 @@ export function TripsContent() {
     <div className="space-y-3">
       <p className="text-xs text-gray-400 px-1">Completed and historical travel routes</p>
       {bookings.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-12 text-center"><Map className="w-10 h-10 text-gray-300 mx-auto mb-2" /><p className="text-sm font-semibold text-gray-700">No trips yet</p></div>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-12 text-center"><MapIcon className="w-10 h-10 text-gray-300 mx-auto mb-2" /><p className="text-sm font-semibold text-gray-700">No trips yet</p></div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <table className="w-full text-xs">
