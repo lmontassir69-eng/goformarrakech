@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowUpRight, ArrowDownRight, TrendingUp, CheckCircle2, AlertTriangle, Clock,
   Calendar, Map, Users, Car, Truck, Building2, Hotel,
   MessageCircle, Zap, CreditCard, FileText, Radio, Loader2, Plus, Trash2, X, UserCircle,
-  Pencil, Download,
+  Pencil, Download, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import type { Driver, Partner, Booking, Vehicle, Supplier, Customer, Expense, HotelContact } from "../lib/supabase";
 import {
@@ -130,21 +130,253 @@ function DeleteBtn({ onClick }: { onClick: () => void }) {
   );
 }
 
+// ===== Revenue Chart (interactive) =====
+
+interface WeekData {
+  weekLabel: string;
+  weekStart: Date;
+  weekEnd: Date;
+  revenue: number;
+  bookingCount: number;
+  categoryBreakdown: { category: string; revenue: number; count: number }[];
+}
+
+const CAT_COLORS: Record<string, string> = {
+  hotels: "bg-teal-500", Hotel: "bg-teal-500",
+  flights: "bg-blue-500", Flight: "bg-blue-500",
+  restaurants: "bg-orange-500", Restaurant: "bg-orange-500",
+  excursions: "bg-emerald-500", Excursion: "bg-emerald-500",
+  activities: "bg-rose-500", Activity: "bg-rose-500",
+  Other: "bg-gray-400",
+};
+
+function RevenueChart({ bookings }: { bookings: Booking[] }) {
+  const [offset, setOffset] = useState(0);
+  const [selectedWeekIdx, setSelectedWeekIdx] = useState<number | null>(null);
+
+  const allWeeks: WeekData[] = useMemo(() => {
+    const now = new Date();
+    now.setHours(23, 59, 59, 999);
+    const weeks: WeekData[] = [];
+    for (let w = 0; w < 52; w++) {
+      const weekEnd = new Date(now);
+      weekEnd.setDate(weekEnd.getDate() - w * 7);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+
+      const weekBookings = bookings.filter((b) => {
+        const created = new Date(b.created_at);
+        return created >= weekStart && created <= weekEnd;
+      });
+      const confirmed = weekBookings.filter((b) => b.status === "confirmed" || b.status === "assigned");
+      const revenue = confirmed.reduce((s, b) => s + Number(b.price_mad), 0);
+
+      const catMap = new Map<string, { revenue: number; count: number }>();
+      for (const b of confirmed) {
+        const cat = b.item_category || "Other";
+        const ex = catMap.get(cat) || { revenue: 0, count: 0 };
+        ex.revenue += Number(b.price_mad);
+        ex.count += 1;
+        catMap.set(cat, ex);
+      }
+
+      weeks.push({
+        weekLabel: `W${w + 1}`,
+        weekStart, weekEnd,
+        revenue,
+        bookingCount: weekBookings.length,
+        categoryBreakdown: Array.from(catMap.entries()).map(([category, d]) => ({ category, ...d })),
+      });
+    }
+    return weeks;
+  }, [bookings]);
+
+  const windowWeeks = allWeeks.slice(offset * 12, offset * 12 + 12).reverse();
+  const maxRevenue = Math.max(...windowWeeks.map((w) => w.revenue), 1);
+  const selectedWeek = selectedWeekIdx !== null ? windowWeeks[selectedWeekIdx] : null;
+  const periodStart = windowWeeks[0]?.weekStart;
+  const periodEnd = windowWeeks[windowWeeks.length - 1]?.weekEnd;
+  const periodLabel = periodStart && periodEnd
+    ? `${periodStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${periodEnd.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+    : "";
+  const totalWindowRevenue = windowWeeks.reduce((s, w) => s + w.revenue, 0);
+  const totalWindowBookings = windowWeeks.reduce((s, w) => s + w.bookingCount, 0);
+  const avgRevenue = totalWindowRevenue / 12;
+
+  return (
+    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-bold text-gray-900">Revenue Trend</h3>
+          <span className="px-2 py-0.5 rounded-full bg-teal-50 text-teal-600 text-[9px] font-bold uppercase tracking-wide">Interactive</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setOffset((o) => Math.min(o + 1, 3)); setSelectedWeekIdx(null); }}
+            disabled={offset >= 3}
+            className="flex items-center justify-center w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-teal-300 disabled:opacity-30 transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-[11px] text-gray-600 font-semibold whitespace-nowrap min-w-[140px] text-center">{periodLabel}</span>
+          <button onClick={() => { setOffset((o) => Math.max(o - 1, 0)); setSelectedWeekIdx(null); }}
+            disabled={offset <= 0}
+            className="flex items-center justify-center w-7 h-7 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:border-teal-300 disabled:opacity-30 transition-all"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-1.5">
+          <TrendingUp className="w-3.5 h-3.5 text-teal-500" />
+          <span className="text-sm font-bold text-gray-900">DH {Math.round(totalWindowRevenue).toLocaleString()}</span>
+          <span className="text-[10px] text-gray-400">total · {totalWindowBookings} bookings</span>
+        </div>
+        <div className="text-[10px] text-gray-400">Avg DH {Math.round(avgRevenue).toLocaleString()}/wk</div>
+      </div>
+
+      {/* Chart area with bar + line overlay */}
+      <div className="relative">
+        {/* Average line */}
+        <div className="absolute left-0 right-0 pointer-events-none" style={{ bottom: `${(avgRevenue / maxRevenue) * 100 * 1.0 + 8}%` }}>
+          <div className="border-t border-dashed border-teal-300/50" />
+          <span className="absolute right-0 -top-3.5 text-[8px] text-teal-500 font-semibold bg-white px-1">avg</span>
+        </div>
+
+        {/* SVG trend line over bars */}
+        <svg className="absolute inset-0 w-full h-40 pointer-events-none z-10" preserveAspectRatio="none" viewBox={`0 0 ${windowWeeks.length * 100} 160`}>
+          <polyline
+            points={windowWeeks.map((w, i) => {
+              const x = i * 100 + 50;
+              const y = 160 - (w.revenue / maxRevenue) * 140 - 4;
+              return `${x},${y}`;
+            }).join(" ")}
+            fill="none"
+            stroke="rgb(13, 148, 136)"
+            strokeWidth="2"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            opacity="0.35"
+          />
+          {windowWeeks.map((w, i) => {
+            const x = i * 100 + 50;
+            const y = 160 - (w.revenue / maxRevenue) * 140 - 4;
+            const isSel = selectedWeekIdx === i;
+            return <circle key={i} cx={x} cy={y} r={isSel ? 5 : 3} fill={isSel ? "rgb(15, 118, 110)" : "rgb(20, 184, 166)"} opacity={isSel ? 1 : 0.6} />;
+          })}
+        </svg>
+
+        <div className="flex items-end gap-1.5 h-40">
+          {windowWeeks.map((week, i) => {
+            const heightPct = (week.revenue / maxRevenue) * 100;
+            const isSelected = selectedWeekIdx === i;
+            const hasData = week.revenue > 0;
+            return (
+              <button key={i} onClick={() => setSelectedWeekIdx(isSelected ? null : i)}
+                className={`flex-1 flex flex-col items-center gap-1.5 group cursor-pointer transition-transform duration-200 ${isSelected ? "scale-105" : "hover:scale-102"}`}>
+                <div className={`text-[8px] font-bold transition-all duration-200 ${isSelected ? "text-teal-700 opacity-100" : "text-gray-500 opacity-0 group-hover:opacity-100"}`}>
+                  {hasData ? `DH ${Math.round(week.revenue).toLocaleString()}` : ""}
+                </div>
+                <div className={`w-full rounded-t-lg transition-all duration-300 ${isSelected
+                  ? "bg-gradient-to-t from-teal-700 to-teal-500 shadow-md shadow-teal-500/30"
+                  : hasData
+                  ? "bg-gradient-to-t from-teal-600 to-teal-400 group-hover:from-teal-700 group-hover:to-teal-500"
+                  : "bg-gray-100 group-hover:bg-gray-200"}`}
+                  style={{ height: `${Math.max(heightPct, 2)}%` }}
+                />
+                <span className={`text-[8px] transition-colors ${isSelected ? "text-teal-700 font-bold" : "text-gray-400 group-hover:text-teal-600"}`}>
+                  {week.weekLabel}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Week detail panel */}
+      {selectedWeek && (
+        <div className="mt-4 pt-4 border-t border-gray-100 animate-[fadeInUp_0.3s_ease-out]">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h4 className="text-xs font-bold text-gray-900">
+                {selectedWeek.weekLabel} — {selectedWeek.weekStart.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} to {selectedWeek.weekEnd.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+              </h4>
+              <p className="text-[10px] text-gray-400 mt-0.5">{selectedWeek.bookingCount} total bookings · DH {Math.round(selectedWeek.revenue).toLocaleString()} confirmed revenue</p>
+            </div>
+            <button onClick={() => setSelectedWeekIdx(null)} className="text-gray-300 hover:text-gray-500 transition-colors">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {selectedWeek.categoryBreakdown.length > 0 ? (
+            <div className="space-y-2">
+              {selectedWeek.categoryBreakdown.sort((a, b) => b.revenue - a.revenue).map((cat) => {
+                const pct = (cat.revenue / selectedWeek.revenue) * 100;
+                const colorCls = CAT_COLORS[cat.category] ?? "bg-gray-400";
+                return (
+                  <div key={cat.category} className="flex items-center gap-2">
+                    <span className="text-[10px] font-semibold text-gray-600 w-20 shrink-0 capitalize">{cat.category}</span>
+                    <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className={`h-full ${colorCls} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[10px] font-bold text-gray-700 w-16 text-right shrink-0">DH {Math.round(cat.revenue).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 w-10 text-right shrink-0">{cat.count} bk</span>
+                  </div>
+                );
+              })}
+              {/* Category share donut summary */}
+              <div className="flex items-center gap-1.5 pt-2 mt-2 border-t border-gray-50">
+                {selectedWeek.categoryBreakdown.sort((a, b) => b.revenue - a.revenue).map((cat) => {
+                  const pct = (cat.revenue / selectedWeek.revenue) * 100;
+                  const colorCls = CAT_COLORS[cat.category] ?? "bg-gray-400";
+                  return (
+                    <div key={cat.category} className="flex items-center gap-1">
+                      <div className={`w-2.5 h-2.5 rounded-full ${colorCls}`} />
+                      <span className="text-[9px] text-gray-500">{cat.category} {Math.round(pct)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <div className="w-10 h-10 rounded-full bg-gray-100 mx-auto flex items-center justify-center mb-2">
+                <TrendingUp className="w-5 h-5 text-gray-300" />
+              </div>
+              <p className="text-xs text-gray-400">No confirmed revenue in this week</p>
+              <p className="text-[10px] text-gray-300 mt-0.5">{selectedWeek.bookingCount} bookings were created but none confirmed yet</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Hint */}
+      {selectedWeekIdx === null && (
+        <p className="text-center text-[10px] text-gray-300 mt-3">Click a bar to see the weekly breakdown · Use arrows to navigate periods</p>
+      )}
+    </div>
+  );
+}
+
 // ===== Overview =====
 
 export function OverviewContent() {
   const [counts, setCounts] = useState<{ pending: number; confirmedToday: number; declinedToday: number; totalRevenue: number } | null>(null);
   const [driverCount, setDriverCount] = useState(0);
   const [partnerCount, setPartnerCount] = useState(0);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
-        const [c, drivers, partners] = await Promise.all([fetchBookingCounts(), fetchDrivers(), fetchPartners()]);
+        const [c, drivers, partners, allBookings] = await Promise.all([fetchBookingCounts(), fetchDrivers(), fetchPartners(), fetchAllBookings()]);
         setCounts(c);
         setDriverCount(drivers.filter((d) => d.status === "available").length);
         setPartnerCount(partners.length);
+        setBookings(allBookings);
       } catch { /* ignore */ } finally { setLoading(false); }
     })();
   }, []);
@@ -159,20 +391,7 @@ export function OverviewContent() {
         <StatCard label="Available Drivers" value={String(driverCount)} change="Ready" trend="up" color="bg-blue-500" />
         <StatCard label="Active Partners" value={String(partnerCount)} change="Connected" trend="up" color="bg-rose-500" />
       </div>
-      <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-bold text-gray-900">Revenue Trend — Last 12 Weeks</h3>
-          <TrendingUp className="w-4 h-4 text-teal-500" />
-        </div>
-        <div className="flex items-end gap-2 h-40">
-          {[45, 52, 48, 61, 55, 68, 72, 65, 78, 82, 75, 91].map((h, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
-              <div className="w-full rounded-t-lg bg-gradient-to-t from-teal-600 to-teal-400 transition-all hover:opacity-80" style={{ height: `${h}%` }} />
-              <span className="text-[8px] text-gray-400">W{i + 1}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <RevenueChart bookings={bookings} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
           <h3 className="text-sm font-bold text-gray-900 mb-3">Today's Activity</h3>
