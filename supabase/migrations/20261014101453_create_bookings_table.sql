@@ -5,7 +5,7 @@
 - `bookings`
   - `id` (uuid, primary key)
   - `ref_code` (text, unique, human-readable booking reference like VG-4821)
-  - `lead_name` (text, customer lead name e.g. "Sarah Jenkins")
+  - `lead_name` (text, customer lead name e.g. "John Smith")
   - `group_size` (int, number of people in the group)
   - `whatsapp_number` (text, contact phone number e.g. "+44 7123 456789")
   - `item_title` (text, name of the booked item e.g. "Riad Dar Anika")
