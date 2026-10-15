@@ -289,7 +289,7 @@ export function ReservationVerificationDesk() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Lead Guest Name *</label>
-                  <input className="w-full px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700 focus:outline-none focus:border-teal-400 transition-all" value={newForm.leadName} onChange={(e) => setNewForm({ ...newForm, leadName: e.target.value })} placeholder="Sarah Jenkins" />
+                  <input className="w-full px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-700 focus:outline-none focus:border-teal-400 transition-all" value={newForm.leadName} onChange={(e) => setNewForm({ ...newForm, leadName: e.target.value })} placeholder="John Smith" />
                 </div>
                 <div>
                   <label className="text-[11px] font-medium text-gray-500 mb-1 block">Group Size</label>
