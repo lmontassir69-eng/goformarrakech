@@ -939,8 +939,8 @@ export function CustomersContent() {
       {showAdd && (
         <Modal title={editCustomer ? "Edit Customer" : "Add Customer"} onClose={() => { setShowAdd(false); setEditCustomer(null); }}>
           <div className="space-y-3">
-            <Field label="Full Name"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sarah Jenkins" /></Field>
-            <Field label="Email"><input className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="sarah@example.com" /></Field>
+            <Field label="Full Name"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Smith" /></Field>
+            <Field label="Email"><input className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@example.com" /></Field>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Country Code"><input className={inputCls} value={form.countryCode} onChange={(e) => setForm({ ...form, countryCode: e.target.value })} placeholder="+44" /></Field>
               <Field label="WhatsApp Number"><input className={inputCls} value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="7123 456789" /></Field>
