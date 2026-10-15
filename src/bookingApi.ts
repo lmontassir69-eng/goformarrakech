@@ -193,6 +193,24 @@ export async function assignDriver(bookingId: string, driverId: string): Promise
   return data as Booking;
 }
 
+export async function sendDriverDispatch(booking: Booking, driver: Driver): Promise<void> {
+  const { error } = await supabase.functions.invoke("send-driver-dispatch", {
+    body: {
+      phoneNumber: driver.phone_number,
+      driverName: driver.name,
+      vehicleType: driver.vehicle_type,
+      bookingRef: booking.ref_code,
+      guestName: booking.lead_name,
+      groupSize: booking.group_size,
+      pickup: booking.item_title,
+      bookingDate: booking.booking_date,
+      bookingTime: booking.booking_time,
+    },
+  });
+
+  if (error) throw new Error("Could not send the dispatch message");
+}
+
 export async function declineBooking(bookingId: string, reason: string): Promise<Booking> {
   const { data, error } = await supabase
     .from("bookings")

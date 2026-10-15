@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { X, Check, Send, User, Car, Clock, MapPin, Loader2, MessageCircle } from "lucide-react";
 import type { Booking, Driver } from "../lib/supabase";
-import { fetchDrivers, assignDriver } from "../bookingApi";
+import { fetchDrivers, assignDriver, sendDriverDispatch } from "../bookingApi";
 
 interface DriverDispatchModalProps {
   booking: Booking | null;
@@ -14,6 +14,7 @@ export function DriverDispatchModal({ booking, onClose, onDispatched }: DriverDi
   const [selectedDriverId, setSelectedDriverId] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -46,6 +47,7 @@ export function DriverDispatchModal({ booking, onClose, onDispatched }: DriverDi
     if (booking) {
       setSelectedDriverId(null);
       setSent(false);
+      setError("");
       setDropdownOpen(false);
     }
   }, [booking]);
@@ -57,14 +59,17 @@ export function DriverDispatchModal({ booking, onClose, onDispatched }: DriverDi
   async function handleSend() {
     if (!driver || !booking) return;
     setSending(true);
+    setError("");
     try {
+      await sendDriverDispatch(booking, driver);
       await assignDriver(booking.id, driver.id);
       setSending(false);
       setSent(true);
       onDispatched(driver.name);
       setTimeout(() => { onClose(); }, 2500);
-    } catch {
+    } catch (cause) {
       setSending(false);
+      setError(cause instanceof Error ? cause.message : "Could not send the dispatch message");
     }
   }
 
@@ -187,6 +192,12 @@ export function DriverDispatchModal({ booking, onClose, onDispatched }: DriverDi
                   <p className="text-xs text-gray-700 whitespace-pre-line font-mono leading-relaxed">{messagePreview}</p>
                   <p className="text-[9px] text-gray-400 text-right mt-2">Auto-generated · WhatsApp Business</p>
                 </div>
+              </div>
+            )}
+
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
+                {error}
               </div>
             )}
 
