@@ -27,7 +27,7 @@ export function StaffAuth({ onLogin, onBackToStore }: StaffAuthProps) {
 
     try {
       if (mode === "signin") {
-        const user = await authenticateStaff(email, password);
+        const user = await authenticateStaff(email);
         if (!user) {
           setError("No staff account found for this email. Try admin@voyagego.com or staff@voyagego.com");
           setLoading(false);

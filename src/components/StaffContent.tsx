@@ -10,7 +10,7 @@ import {
   fetchDrivers, addDriver, deleteDriver, updateDriver,
   fetchPartners, fetchPartnersByCategory, addPartner, deletePartner, updatePartner,
   fetchAllBookings, fetchBookingCounts, fetchDistinctCustomers,
-  cancelBooking, deleteBooking, issueInvoice,
+  deleteBooking, issueInvoice,
   fetchVehicles, addVehicle, deleteVehicle, updateVehicle,
   fetchSuppliers, addSupplier, deleteSupplier, updateSupplier,
   fetchCustomers, addCustomer, deleteCustomer, updateCustomer,

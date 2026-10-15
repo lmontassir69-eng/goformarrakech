@@ -20,7 +20,7 @@ function generateVoucherCode(refCode: string): string {
 
 // ===== AUTH =====
 
-export async function authenticateStaff(email: string, _password: string): Promise<User | null> {
+export async function authenticateStaff(email: string): Promise<User | null> {
   const { data, error } = await supabase
     .from("users")
     .select("*")

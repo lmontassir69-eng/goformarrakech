@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
-  Clock, CheckCircle2, XCircle, Users, Phone, MessageCircle,
+  Clock, CheckCircle2, XCircle, Users, MessageCircle,
   Check, X, ChevronDown, Loader2, Building2, Calendar, Ticket,
   RefreshCw, Inbox, Radio, Trash2, Ban, Plus,
 } from "lucide-react";
