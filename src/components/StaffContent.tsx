@@ -1096,7 +1096,7 @@ export function HotelsContent() {
 
 export function WhatsAppInboxContent() {
   const chats = [
-    { name: "Sarah Jenkins", preview: "Hi! Is the riad confirmed for the 16th?", time: "2 min ago", unread: 2, type: "client" },
+    { name: "John Smith", preview: "Hi! Is the riad confirmed for the 16th?", time: "2 min ago", unread: 2, type: "client" },
     { name: "Hassan Alami (Driver)", preview: "On my way to Agafay, ETA 20 min", time: "8 min ago", unread: 1, type: "driver" },
     { name: "James Liu", preview: "Perfect, see you tomorrow!", time: "1 hour ago", unread: 0, type: "client" },
     { name: "Riad Dar Anika", preview: "We have the superior rooms ready", time: "3 hours ago", unread: 0, type: "partner" },
